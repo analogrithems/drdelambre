@@ -13,7 +13,7 @@
 	}
 })(function(lib){
 	lib.mixin({
-		istouch: !!('ontouchend' in window.document),
+		istouch: ('ontouchstart' in window),
 		touch : function(options){
 			var touches = {},
 				evts = {},
@@ -47,7 +47,7 @@
 				var ignoreAll, ignore,
 					tar, ni, no, touch;
 
-				if(lib.istouch){
+				if(evt.type === 'touchstart'){
 					ignoreAll = true;
 					for(ni = 0; ni < evt.changedTouches.length; ni++){
 						ignore = false;
@@ -77,10 +77,11 @@
 						if(!lib.type(self.start,'function')){
 							continue;
 						}
+
 						self.start(makeEvt(touch));
 					}
 
-					if(!ignoreAll){
+					if(!ignoreAll && self.element !== window){
 						evt.preventDefault();
 					}
 				} else {
@@ -106,23 +107,25 @@
 				}
 
 
-				if(Object.keys(touches).length === 1 && lib.istouch){
-					win.on('touchmove', move);
-					win.on('touchend', end);
-					win.on('touchcancel', end);
-
+				if(Object.keys(touches).length === 1){
 					evts = {};
-				} else if(!lib.istouch){
-					win.on('mousemove', move);
-					win.on('mouseup', end);
 				}
 
 				return false;
 			}
 			function move(evt){
+				if(!Object.keys(touches).length){
+					return;
+				}
+
+				if(!lib.type(self.move,'function')){
+					return;
+				}
+
 				var ni, touch;
 				evt.preventDefault();
-				if(!lib.istouch){
+
+				if(evt.type !== 'touchmove'){
 					evts = { 0:evt };
 				} else {
 					for(ni = 0; ni < evt.touches.length; ni++){
@@ -157,17 +160,13 @@
 				t();
 			};
 			function end(evt){
+				if(!Object.keys(touches).length){
+					return;
+				}
 				var win = lib.dom(window),
 					touch, ni;
-				if(!lib.istouch){
-					if(lib.type(self.click,'function') && !touches[0].has_moved){
-						self.click(makeEvt(evt));
-					}
-					if(lib.type(self.end,'function')){
-						self.end(makeEvt(evt));
-					}
-					delete touches[0];
-				} else {
+
+				if(evt.type !== 'mouseup') {
 					for(ni = 0; ni < evt.changedTouches.length; ni++){
 						touch = evt.changedTouches[ni];
 						if(!touches[touch.identifier]){
@@ -178,19 +177,18 @@
 						}
 						delete touches[touch.identifier];
 					}
+				} else {
+					if(lib.type(self.click,'function') && !touches[0].has_moved){
+						self.click(makeEvt(evt));
+					}
+					if(lib.type(self.end,'function')){
+						self.end(makeEvt(evt));
+					}
+					delete touches[0];
 				}
 
 				if(Object.keys(touches).length){
 					return;
-				}
-
-				if(lib.istouch){
-					win.off('touchmove', move);
-					win.off('touchend', end);
-					win.off('touchcancel', end);
-				} else {
-					win.off('mousemove', move);
-					win.off('mouseup', end);
 				}
 
 				touches = {};
@@ -202,22 +200,25 @@
 			};
 
 			self.remove = function(){
-				if(!lib.istouch){
-					self.element.off('mousedown', start);
-					win.off('mousemove', move);
-					win.off('mouseup', end);
-					return;
-				}
-
 				self.element.off('touchstart', start);
+				self.element.off('mousedown', start);
 
 				win.off('touchmove', move);
 				win.off('touchend', end);
 				win.off('touchcancel', end);
+				win.off('mousemove', move);
+				win.off('mouseup', end);
 			};
 
 			lib.init(function(){
-				lib.dom(self.element).on(lib.istouch?'touchstart':'mousedown', start);
+				lib.dom(self.element).on('touchstart', start);
+				lib.dom(self.element).on('mousedown', start);
+
+				win.on('touchmove', move);
+				win.on('touchend', end);
+				win.on('touchcancel', end);
+				win.on('mousemove', move);
+				win.on('mouseup', end);
 			});
 
 			return self;

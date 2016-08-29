@@ -8,22 +8,20 @@
 	} else if (typeof exports === 'object') {
 		module.exports = factory(require('../dd'),require('./basemodel'), require('./dom'));
 	} else {
-		factory($dd, basemodel);
+		factory($dd, $dd.basemodel);
 	}
 })(function(lib, basemodel){
 	if(lib.hasOwnProperty('view')){
 		return;
 	}
-	basemodel.fns = lib.extend(basemodel.fns, {
+	var fns = {
 		view_fill: function(self,def){
 			def = def || {};
 			self._view_fill = lib.extend(self._view_fill||{},def);
 
 			return self;
 		}
-	});
-
-	var base = basemodel();
+	};
 
 	var ret = function(def){
 		var self;
@@ -36,14 +34,10 @@
 
 			self.extend(def);
 
-			self.view_fill = function(def){
-				def = def || {};
-				self._view_fill = lib.extend(self._view_fill||{},def);
-
-				return self;
-			};
+			self.view_fill = function(def){ return fns.view_fill(self, def); };
 		} else {
-			self = base(def);
+			self = basemodel()(def);
+			self.view_fill = function(def){ return fns.view_fill(self, def); };
 		}
 
 		self.on_fill(function(_data){

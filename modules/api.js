@@ -23,22 +23,22 @@
 			}
 
 			for(p = 0; p < obj.length; p++){
-				k = prefix + "[" + p + "]";
+				k = prefix + "[]";
 				v = obj[p];
 				str.push(typeof v === "object"?postString(v,k):encodeURIComponent(k) +
 					"=" + encodeURIComponent(v));
 			}
-		}
-
-		for(p in obj) {
-			if(prefix){
-				k = prefix + "[" + p + "]";
-			} else {
-				k = p;
+		} else {
+			for(p in obj) {
+				if(prefix){
+					k = prefix + "[" + p + "]";
+				} else {
+					k = p;
+				}
+				v = obj[p];
+				str.push(typeof v === "object"?postString(v,k):encodeURIComponent(k) +
+					"=" + encodeURIComponent(v));
 			}
-			v = obj[p];
-			str.push(typeof v === "object"?postString(v,k):encodeURIComponent(k) +
-				"=" + encodeURIComponent(v));
 		}
 		return str.join("&");
 	}
@@ -375,6 +375,10 @@
 		}
 		_mocks[topic.path].methods[params.method] = params.callback;
 	};
+
+	if (lib.api) {
+		return;
+	}
 
 	lib.mixin({
 		api : self

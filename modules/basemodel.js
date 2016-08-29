@@ -14,23 +14,24 @@
 	// stuff to exclude from the serialization
 	var blacklist = /^(_.*|def|on_fill|on_out|fill|out|extend|attach|map|type|errors|validate)$/;
 
-	// this bit of code, when called, returns a constructor for a model,
-	// that loads all of the functions in ret.fns at the time of calling
-	// this function
 	var ret = function(){
 		return function(def){
 			var self = {},
 				ni;
 
-			for(ni in ret.fns){
-				self[ni] = (function(fn){
-					return function(){
-						var args = Array.prototype.slice.call(arguments);
-						args.unshift(self);
-						return fn.apply(self,args);
-					};
-				})(ret.fns[ni]);
-			}
+			// this stuff looks silly, but the previous method of iterating over
+			// the function definitions and giving context with apply, disabled chrome
+			// optimizations and slowed down these core functions
+			self.fill = function(data) { return ret.fns.fill(self, data); };
+			self.out = function() { return ret.fns.out(self); };
+			self.clear = function() { return ret.fns.clear(self); };
+			self.extend = function(_def) { return ret.fns.extend(self, _def); };
+			self.attach = function(_def) { return ret.fns.attach(self, _def); };
+			self.map = function(_maps) { return ret.fns.map(self, _maps); };
+			self.type = function(_types) { return ret.fns.type(self, _types); };
+			self.on_fill = function(filter, fire_after) { return ret.fns.on_fill(self, filter, fire_after); };
+			self.on_out = function(filter, fire_before) { return ret.fns.on_out(self, filter, fire_before); };
+			self.validate = function(_map) { return ret.fns.validate(self, _map); };
 
 			return self.extend(def);
 		}
@@ -78,6 +79,10 @@
 						} else if(lib.type(data[na],'string') && !isNaN(Date.parse(data[na]))){
 							self[ni] = new def[ni].type(new Date(data[na]));
 						}
+						continue;
+					}
+					if(data[na] === null){
+						self[ni] = null;
 						continue;
 					}
 					if(self[ni] && lib.type(self[ni].fill, 'function')){
@@ -184,7 +189,7 @@
 
 			return obj;
 		},
-		clear: function(){
+		clear: function(self){
 			for(var ni in self.def){
 				self[ni] = self.def[ni]['default'];
 			}
@@ -321,6 +326,10 @@
 			return self;
 		}
 	};
+
+	lib.mixin({
+		basemodel: ret
+	});
 
 	return ret;
 });
